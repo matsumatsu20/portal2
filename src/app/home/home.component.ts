@@ -1,12 +1,13 @@
 import {
   Component, OnInit, ChangeDetectionStrategy, ViewEncapsulation, OnDestroy, ViewChild, Inject
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Params, Router } from '@angular/router';
 import { isBrowser } from 'angular2-universal';
 
 import { Subscription, Observable } from 'rxjs';
 import * as d3 from 'd3';
 
+import { Team } from '../shared/model/team.model';
 import { isProd } from '../app.module';
 import { NotificationService } from '../shared/notification.service';
 import { SessionService } from '../shared/session.service';
@@ -14,8 +15,6 @@ import { ModelService } from '../shared/model/model.service';
 import { SSEService } from '../shared/sse.service';
 import { Score } from '../shared/model/score.model';
 import { EventHubService } from '../shared/eventhub.service';
-
-
 
 @Component({
   changeDetection: ChangeDetectionStrategy.Default,
@@ -36,6 +35,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   public scores: Score[];
   public splineOptions: Object;
   public barOptions: Object;
+  public graphOptions: Object;
+  public team: Team;
   private startDate: string;
   private endDate: string;
   public remain =  {days: 365, hours: 0, minutes: 0, seconds: 0};
@@ -102,6 +103,86 @@ export class HomeComponent implements OnInit, OnDestroy {
           this.disabledRunBenchmarker = !(this.isLoggedIn && this.isInSession && !this.isInQueue);
         });
     }
+
+    this.isBrowser = isBrowser;
+
+    let id = this.session.get('team_id');
+
+    console.log(id);
+    console.log(id);
+    console.log(id);
+    console.log(id);
+    console.log(id);
+    console.log(id);
+
+
+    this.model.get(`/api/teams/${id}`)
+      .subscribe((teamData: { id: number; name: string; members: string[] }) => {
+        let ms = teamData.members.map((member) => {
+          return { name: member };
+        });
+        this.team = new Team(teamData.id, teamData.name, ms);
+      });
+
+    this.model.get(`/api/scores/${id}`)
+      .subscribe((data: { id: number; score: number; message: string; date: string }[]) => {
+        this.graphOptions = {
+          size: { height: 400 },
+          axis: {
+            x: {
+              type: 'timeseries',
+              localtime: true,
+              tick: {
+                format: (x: any) => {
+                  // localeが適応されないためハック
+                  let d = new Date(x);
+                  d.setTime(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
+                  let day = '日月火水木金土'[d.getDay()];
+                  return `${d.getMonth() + 1}/${d.getDate()}(${day})`;
+                },
+                culling: { max: 6 },
+                count: 6
+              }
+            },
+            y: {
+              min: 0,
+              padding: 0
+            }
+          },
+          tooltip: {
+            format: {
+              title: (x) => {
+                // localeが適応されないためハック
+                let d = new Date(x);
+                d.setTime(d.getTime() - d.getTimezoneOffset() * 60 * 1000);
+                let day = '日月火水木金土'[d.getDay()];
+                return `${d.getMonth() + 1}/${d.getDate()}(${day}) ${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}`;
+              }
+            }
+          },
+          subchart: {
+            show: true
+          },
+          zoom: {
+            enabled: true,
+            rescale: true,
+            extent: [1, 10]
+          },
+          data: {
+            type: 'line',
+            x: 'x',
+            xFormat: '%Y-%m-%dT%H:%M:%S.%LZ',
+            columns: [
+              [`x`, ...data.map((s) => s.date).reverse()],
+              [`${this.team.name}`, ...data.map((s) => s.score).reverse()]
+            ]
+          }
+        };
+
+        if (this.isOwnTeam()) {
+          this.scores = data.map((s) => new Score(s.score, s.message, s.date));
+        }
+      });
 
     this.model.get('/api/queues').subscribe(
       (data) => {
@@ -180,6 +261,18 @@ export class HomeComponent implements OnInit, OnDestroy {
           (err) => console.log('err', err)
         );
     }
+  }
+
+  exists() {
+    return typeof this.team !== 'undefined';
+  }
+
+  isOwnTeam() {
+    if (typeof this.team === 'undefined' || !this.session.get('team_id')) {
+      return false;
+    }
+
+    return this.team['id'] === this.session.get('team_id');
   }
 
   onClickRunBenchmarker() {

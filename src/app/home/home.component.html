@@ -41,7 +41,17 @@
   </div>
 </section>
 
-<section class="section--center mdl-grid mdl-grid--no-spacing mdl-shadow--2dp">
+<section *ngIf="exists()" class="section--center mdl-grid mdl-grid--no-spacing mdl-shadow--2dp">
+  <p>終了まであとわずか！！最後の力を振り絞ってください！！</p>
+  <div class="mdl-card__title mdl-card--expand">
+    <h2 class="mdl-card__title-text">スコアの推移</h2>
+  </div>
+  <div class="mdl-card__supporting-text mdl-grid mdl-grid--no-spacing">
+    <ng-c3 [options]="graphOptions"></ng-c3>
+  </div>
+</section>
+
+<!-- <section class="section--center mdl-grid mdl-grid--no-spacing mdl-shadow--2dp">
   <div class="mdl-card__title mdl-card--expand">
     <h2 class="mdl-card__title-text">各チームのスコア</h2>
   </div>
@@ -63,7 +73,7 @@
       </button>
     </a>
   </div>
-</section>
+</section> -->
 
 <section *ngIf="isLoggedIn" class="section--center mdl-grid mdl-grid--no-spacing mdl-shadow--2dp">
   <div class="mdl-card__title mdl-card--expand">
