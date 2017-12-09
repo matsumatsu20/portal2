@@ -275,6 +275,10 @@ export class HomeComponent implements OnInit, OnDestroy {
     return this.team['id'] === this.session.get('team_id');
   }
 
+  isUnei() {
+    return this.session.get('team_id') === 7;
+  }
+
   onClickRunBenchmarker() {
     this.hub.emit('indeterminate', true);
     this.isInQueue = true;
